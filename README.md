@@ -1,2 +1,3 @@
-# gocache
-An opinionated caching mechanism written in Go
+# Go Cache
+
+> An opinionated caching mechanism written in Go
