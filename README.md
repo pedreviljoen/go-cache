@@ -20,7 +20,9 @@ type Cache interface {
 	// Flush deletes all cached data.
 	Flush() error
 	// FlushStale flushes all stale cached items, older than the time window
-	FlushStale() error
+	FlushStale() error 
+	// RunCleaner runs a process inside a go routine to flush stale cache items outside of the time window
+	RunCleaner()
 }
 ```
 
@@ -77,6 +79,8 @@ func main() {
 	if err != nil {
 		log.Printf("err: %v", err)
 	}
+	
+	c.RunCleaner()                          // Runs a cleaner process in a isolated go-routine which clears stale cache items
 }
 ```
 
