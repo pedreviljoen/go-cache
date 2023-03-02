@@ -14,4 +14,6 @@ type Cache interface {
 	Flush() error
 	// FlushStale flushes all stale cached items, older than the time window
 	FlushStale() error
+	// RunCleaner runs a process inside a go routine to flush stale cache items outside of the time window
+	RunCleaner()
 }

@@ -20,6 +20,11 @@ type MemCacheValue struct {
 	value []byte    // result of proto.Marshal()
 }
 
+type cleaner struct {
+	Interval time.Duration
+	stop     chan bool
+}
+
 type Option func(*MemCache)
 
 // New -

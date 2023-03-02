@@ -2,6 +2,7 @@ package memory
 
 import (
 	"fmt"
+	"runtime"
 	"time"
 )
 
@@ -86,4 +87,50 @@ func (c *MemCache) FlushStale() error {
 		}
 	}
 	return nil
+}
+
+// RunCleaner -
+// Initialises and starts a new cleaner process in a separate go routine
+// this process flushes cache items inside the cache which are older than the configured cache window
+func (c *MemCache) RunCleaner() {
+	j := c.initCleaner()
+	j.run(c)
+	runtime.SetFinalizer(c, j.stopCleaner)
+}
+
+// initCleaner -
+// Initialises a new cleaner
+func (c *MemCache) initCleaner() *cleaner {
+	return &cleaner{
+		Interval: c.window,
+		stop:     make(chan bool),
+	}
+}
+
+// runCleaner -
+// Runs the cleaner inside a go routine
+func (j *cleaner) run(c *MemCache) {
+	go j.cleanup(c)
+}
+
+// cleanup -
+// Calls the underlying FlushStale method of the cache which clears
+// stale cache items
+func (j *cleaner) cleanup(c *MemCache) {
+	ticker := time.NewTicker(j.Interval)
+	for {
+		select {
+		case <-ticker.C:
+			c.FlushStale()
+		case <-j.stop:
+			ticker.Stop()
+			return
+		}
+	}
+}
+
+// stopCleaner -
+// Sends a stop signal to the go-routine running the cleaner process
+func (j *cleaner) stopCleaner() {
+	j.stop <- true
 }
