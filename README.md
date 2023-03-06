@@ -26,6 +26,8 @@ type Cache interface {
 }
 ```
 
+### In-memory cache adaptor
+
 As an example using the in-memory caching adaptor the below code snippet instantiates a new cache and has an example of each method in the interface.
 
 ```go
@@ -84,10 +86,76 @@ func main() {
 }
 ```
 
+### Redis cache adaptor
+
+As an example using the Redis caching adaptor the below code snippet instantiates a new cache and has an example of each method in the interface.
+
+```go
+package main
+
+import (
+	"encoding/json"
+	"log"
+	"time"
+
+	rc "github.com/pedreviljoen/go-cache/redis"
+)
+
+type example struct {
+	value   string
+	number  int
+}
+
+const (
+	addr = "localhost:6379"
+	user = "redis"
+	password = ""  // empty string for not setting a password
+)
+
+func main() {
+	c := rc.New(addr, user, password, rc.Window(time.Minute * 5)) // instantiates a new cache with a default flush window of 5 minutes
+
+	val := example{
+		value: "Some value",
+		number: 4,
+    }
+	cv, _ := json.Marshal(val)              // Also supports proto.Marshall for proto messages
+	err := c.Put("some key", cv)            // Put some value on the cache
+	if err != nil {
+		log.Printf("err: %v", err)
+	}
+	
+	val, err = c.Get("some key")            // Retrieve some value from the cache with the given key
+	if err != nil {
+		log.Printf("err: %v", err)
+    }
+	
+	err = c.Delete("some key")              // Delete some value from the cache with the given key
+	if err != nil {
+		log.Printf("err: %v", err)
+	}
+	
+	ok := c.IsWarm("some key")              // Checks if the key provide has a value saved in the cache
+	log.Printf("result: %v", ok)
+	
+	err = c.FlushStale()                    // Flushes items from the cache older than the time window
+	if err != nil {
+		log.Printf("err: %v", err)
+	}
+	
+	err = c.Flush()                         // Flushes all items from the cache
+	if err != nil {
+		log.Printf("err: %v", err)
+	}
+	
+	c.RunCleaner()                          // Runs a cleaner process in a isolated go-routine which clears stale cache items
+}
+```
+
 ## Cache adaptors
 
 - [x] In memory
-- [ ] Redis
+- [x] Redis
 - [ ] MemCache
 
 ## Contribute
