@@ -18,37 +18,71 @@ func (c *RedisCache) IsWarm(key string) bool {
 
 // Put -
 // Accepts a cache key identifier and value, save the respective key and value
-// inside the in-memory cache
+// inside the Redis cache
 func (c *RedisCache) Put(key string, value []byte) error {
-
+	if err := c.c.Set(context.Background(), key, value, c.window).Err(); err != nil {
+		return err
+	}
 	return nil
 }
 
 // Get -
 // Accepts a cache key identifier and fetches the value of the corresponding cache key
 func (c *RedisCache) Get(key string) ([]byte, error) {
-
-	return []byte(""), nil
+	val, err := c.c.Get(context.Background(), key).Result()
+	if err != nil {
+		return nil, err
+	}
+	return []byte(val), nil
 }
 
 // Delete -
-// Accepts a cache key identifier and deletes the value of the corresponding cache key
+// Accepts a cache item key identifier and deletes the value of the corresponding cache key
 func (c *RedisCache) Delete(key string) error {
-
+	if err := c.c.Del(context.Background(), key).Err(); err != nil {
+		return err
+	}
 	return nil
 }
 
 // Flush -
 // Empties the entire cache
 func (c *RedisCache) Flush() error {
-
+	ctx := context.Background()
+	iter := c.c.Scan(ctx, 0, "", 0).Iterator()
+	for iter.Next(ctx) {
+		key := iter.Val()
+		if err := c.c.Del(ctx, key).Err(); err != nil {
+			return err
+		}
+	}
+	if err := iter.Err(); err != nil {
+		return err
+	}
 	return nil
 }
 
 // FlushStale -
 // Iterates over all cache key-value items and removes all stale cache items
 func (c *RedisCache) FlushStale() error {
+	ctx := context.Background()
+	iter := c.c.Scan(ctx, 0, "", 0).Iterator()
+	for iter.Next(ctx) {
+		key := iter.Val()
+		d, err := c.c.TTL(ctx, key).Result()
+		if err != nil {
+			return err
+		}
 
+		if d == -1 { // -1 means no TTL
+			if err := c.c.Del(ctx, key).Err(); err != nil {
+				return err
+			}
+		}
+	}
+	if err := iter.Err(); err != nil {
+		return err
+	}
 	return nil
 }
 
